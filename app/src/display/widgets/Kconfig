@@ -46,5 +46,11 @@ config ZMK_WIDGET_BONGO_CAT_SLOW_LIMIT
 
 endif # ZMK_WIDGET_BONGO_CAT
 
+config ZMK_WIDGET_LUNA
+    bool "Widget for displaying luna that reacts to typing"
+    depends on !ZMK_DISPLAY_WORK_QUEUE_DEDICATED && (!ZMK_SPLIT || ZMK_SPLIT_BLE_ROLE_CENTRAL)
+    select LVGL_USE_IMG
+    select LVGL_USE_ANIMATION
+    select ZMK_WPM
 
 endmenu
