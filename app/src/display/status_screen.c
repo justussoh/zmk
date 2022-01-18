@@ -76,7 +76,7 @@ lv_obj_t *zmk_display_status_screen() {
 
 #if IS_ENABLED(CONFIG_ZMK_WIDGET_LUNA)
     zmk_widget_luna_init(&luna_widget, screen);
-    lv_obj_align(zmk_widget_luna_obj(&luna_widget), NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(zmk_widget_luna_obj(&luna_widget), NULL, LV_ALIGN_IN_LEFT_MID, 0, 0);
 #endif
 
 #if IS_ENABLED(CONFIG_ZMK_WIDGET_WPM_STATUS)
