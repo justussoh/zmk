@@ -6,6 +6,7 @@
 
 #include <zmk/event_manager.h>
 #include <zmk/events/wpm_state_changed.h>
+#include <zmk/events/caps_word_state_changed.h>
 
 #include <logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -22,7 +23,9 @@ enum anim_state {
     anim_state_none,
     anim_state_idle,
     anim_state_slow,
-    anim_state_fast
+    anim_state_fast,
+    anim_state_bark,
+    anim_state_sneak,
 } current_anim_state;
 
 const void **images;
@@ -73,25 +76,18 @@ void set_img_src(void *var, lv_anim_value_t val) {
     lv_img_set_src(img, images[val]);
 }
 
-void update_luna_wpm(struct zmk_widget_luna *widget, int wpm) {
+enum luna_state {
+    luna_state_normal,
+    luna_state_bark,
+    luna_state_sneak,
+} current_luna_state;
+int wpm = 0;
+
+void update_luna_wpm(struct zmk_widget_luna *widget) {
     LOG_DBG("anim state %d", current_anim_state);
-    if (wpm < CONFIG_ZMK_WIDGET_LUNA_IDLE_LIMIT) {
-        if (current_anim_state != anim_state_idle) {
-            LOG_DBG("Set source to idle images!");
-            lv_anim_init(&widget->anim);
-            lv_anim_set_var(&widget->anim, widget->obj);
-            lv_anim_set_time(&widget->anim, 1000);
-            lv_anim_set_values(&widget->anim, 0, 1);
-            lv_anim_set_exec_cb(&widget->anim, set_img_src);
-            lv_anim_set_repeat_count(&widget->anim, 1000);
-            lv_anim_set_repeat_delay(&widget->anim, 100);
-            images = idle_images;
-            current_anim_state = anim_state_idle;
-            lv_anim_start(&widget->anim);
-        }
-    } else if (wpm < CONFIG_ZMK_WIDGET_LUNA_SLOW_LIMIT) {
-        if (current_anim_state != anim_state_slow) {
-            LOG_DBG("Set source to slow image!");
+    if (current_luna_state == luna_state_bark) {
+        if (current_anim_state != anim_state_bark) {
+            LOG_DBG("Set source to bark images!");
             lv_anim_init(&widget->anim);
             lv_anim_set_time(&widget->anim, 500);
             lv_anim_set_repeat_delay(&widget->anim, 500);
@@ -99,23 +95,67 @@ void update_luna_wpm(struct zmk_widget_luna *widget, int wpm) {
             lv_anim_set_values(&widget->anim, 0, 1);
             lv_anim_set_exec_cb(&widget->anim, set_img_src);
             lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
-            images = walk_images;
-            current_anim_state = anim_state_slow;
+            images = bark_images;
+            current_anim_state = anim_state_bark;
+            lv_anim_start(&widget->anim);
+        }
+    } else if (current_luna_state == luna_state_sneak) {
+        if (current_anim_state != anim_state_sneak) {
+            LOG_DBG("Set source to bark images!");
+            lv_anim_init(&widget->anim);
+            lv_anim_set_time(&widget->anim, 500);
+            lv_anim_set_repeat_delay(&widget->anim, 500);
+            lv_anim_set_var(&widget->anim, widget->obj);
+            lv_anim_set_values(&widget->anim, 0, 1);
+            lv_anim_set_exec_cb(&widget->anim, set_img_src);
+            lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
+            images = sneak_images;
+            current_anim_state = anim_state_sneak;
             lv_anim_start(&widget->anim);
         }
     } else {
-        if (current_anim_state != anim_state_fast) {
-            LOG_DBG("Set source to fast images!");
-            lv_anim_init(&widget->anim);
-            lv_anim_set_time(&widget->anim, 500);
-            lv_anim_set_repeat_delay(&widget->anim, 500);
-            lv_anim_set_var(&widget->anim, widget->obj);
-            lv_anim_set_values(&widget->anim, 0, 1);
-            lv_anim_set_exec_cb(&widget->anim, set_img_src);
-            lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
-            images = run_images;
-            current_anim_state = anim_state_fast;
-            lv_anim_start(&widget->anim);
+        if (wpm < CONFIG_ZMK_WIDGET_LUNA_IDLE_LIMIT) {
+            if (current_anim_state != anim_state_idle) {
+                LOG_DBG("Set source to idle images!");
+                lv_anim_init(&widget->anim);
+                lv_anim_set_var(&widget->anim, widget->obj);
+                lv_anim_set_time(&widget->anim, 1000);
+                lv_anim_set_values(&widget->anim, 0, 1);
+                lv_anim_set_exec_cb(&widget->anim, set_img_src);
+                lv_anim_set_repeat_count(&widget->anim, 1000);
+                lv_anim_set_repeat_delay(&widget->anim, 100);
+                images = idle_images;
+                current_anim_state = anim_state_idle;
+                lv_anim_start(&widget->anim);
+            }
+        } else if (wpm < CONFIG_ZMK_WIDGET_LUNA_SLOW_LIMIT) {
+            if (current_anim_state != anim_state_slow) {
+                LOG_DBG("Set source to slow image!");
+                lv_anim_init(&widget->anim);
+                lv_anim_set_time(&widget->anim, 500);
+                lv_anim_set_repeat_delay(&widget->anim, 500);
+                lv_anim_set_var(&widget->anim, widget->obj);
+                lv_anim_set_values(&widget->anim, 0, 1);
+                lv_anim_set_exec_cb(&widget->anim, set_img_src);
+                lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
+                images = walk_images;
+                current_anim_state = anim_state_slow;
+                lv_anim_start(&widget->anim);
+            }
+        } else {
+            if (current_anim_state != anim_state_fast) {
+                LOG_DBG("Set source to fast images!");
+                lv_anim_init(&widget->anim);
+                lv_anim_set_time(&widget->anim, 500);
+                lv_anim_set_repeat_delay(&widget->anim, 500);
+                lv_anim_set_var(&widget->anim, widget->obj);
+                lv_anim_set_values(&widget->anim, 0, 1);
+                lv_anim_set_exec_cb(&widget->anim, set_img_src);
+                lv_anim_set_repeat_count(&widget->anim, LV_ANIM_REPEAT_INFINITE);
+                images = run_images;
+                current_anim_state = anim_state_fast;
+                lv_anim_start(&widget->anim);
+            }
         }
     }
 }
@@ -123,10 +163,10 @@ void update_luna_wpm(struct zmk_widget_luna *widget, int wpm) {
 int zmk_widget_luna_init(struct zmk_widget_luna *widget, lv_obj_t *parent) {
     widget->obj = lv_img_create(parent, NULL);
 
-    // lv_img_set_auto_size(widget->obj, true);
     lv_img_set_angle(widget->obj, 900);
 
-    update_luna_wpm(widget, 0);
+    current_luna_state = luna_state_normal;
+    update_luna_wpm(widget);
 
     sys_slist_append(&widgets, &widget->node);
 
@@ -137,13 +177,24 @@ lv_obj_t *zmk_widget_luna_obj(struct zmk_widget_luna *widget) { return widget->o
 
 int luna_listener(const zmk_event_t *eh) {
     struct zmk_widget_luna *widget;
-    struct zmk_wpm_state_changed *ev = as_zmk_wpm_state_changed(eh);
+    struct zmk_wpm_state_changed *ev_wpm = as_zmk_wpm_state_changed(eh);
+    struct zmk_caps_word_state_changed *ev_cw = as_zmk_caps_word_state_changed(eh);
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
-        LOG_DBG("Set the WPM %d", ev->state);
-        update_luna_wpm(widget, ev->state);
+        LOG_DBG("Set the WPM %d", ev_wpm->state);
+        if (ev_cw) {
+            if (ev_cw->state && current_luna_state != luna_state_bark) {
+                current_luna_state = luna_state_bark;
+            } else {
+                current_luna_state = luna_state_normal;
+            }
+        } else if (ev_wpm && wpm != ev_wpm->state) {
+            wpm = ev_wpm->state;
+        }
+        update_luna_wpm(widget);
     }
     return ZMK_EV_EVENT_BUBBLE;
 }
 
 ZMK_LISTENER(zmk_widget_luna, luna_listener)
 ZMK_SUBSCRIPTION(zmk_widget_luna, zmk_wpm_state_changed);
+ZMK_SUBSCRIPTION(zmk_widget_luna, zmk_caps_word_state_changed);
