@@ -7,6 +7,7 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/wpm_state_changed.h>
 #include <zmk/events/caps_word_state_changed.h>
+#include <zmk/events/keycode_state_changed.h>
 
 #include <logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -74,6 +75,15 @@ const void *sneak_images[] = {
 void set_img_src(void *var, lv_anim_value_t val) {
     lv_obj_t *img = (lv_obj_t *)var;
     lv_img_set_src(img, images[val]);
+}
+
+bool is_sneak(uint8_t usage_id) {
+    return (usage_id == HID_USAGE_KEY_KEYBOARD_LEFTCONTROL ||
+            usage_id == HID_USAGE_KEY_KEYBOARD_RIGHTCONTROL);
+}
+
+bool is_jump(uint8_t usage_id) {
+    return (usage_id == HID_USAGE_KEY_KEYBOARD_SPACEBAR || usage_id == HID_USAGE_KEY_KEYPAD_SPACE);
 }
 
 enum luna_state {
@@ -179,6 +189,7 @@ int luna_listener(const zmk_event_t *eh) {
     struct zmk_widget_luna *widget;
     struct zmk_wpm_state_changed *ev_wpm = as_zmk_wpm_state_changed(eh);
     struct zmk_caps_word_state_changed *ev_cw = as_zmk_caps_word_state_changed(eh);
+    struct zmk_keycode_state_changed *ev_kc = as_zmk_keycode_state_changed(eh);
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
         LOG_DBG("Set the WPM %d", ev_wpm->state);
         if (ev_cw) {
@@ -189,6 +200,12 @@ int luna_listener(const zmk_event_t *eh) {
             }
         } else if (ev_wpm && wpm != ev_wpm->state) {
             wpm = ev_wpm->state;
+        } else if (ev_kc) {
+            if (is_jump(ev_kc->keycode) && ev_kc->state) {
+                lv_img_set_offset_x(widget->obj, 4);
+            } else {
+                lv_img_set_offset_x(widget->obj, 0);
+            }
         }
         update_luna_wpm(widget);
     }
@@ -198,3 +215,4 @@ int luna_listener(const zmk_event_t *eh) {
 ZMK_LISTENER(zmk_widget_luna, luna_listener)
 ZMK_SUBSCRIPTION(zmk_widget_luna, zmk_wpm_state_changed);
 ZMK_SUBSCRIPTION(zmk_widget_luna, zmk_caps_word_state_changed);
+ZMK_SUBSCRIPTION(zmk_widget_luna, zmk_keycode_state_changed);
