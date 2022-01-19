@@ -201,10 +201,18 @@ int luna_listener(const zmk_event_t *eh) {
         } else if (ev_wpm && wpm != ev_wpm->state) {
             wpm = ev_wpm->state;
         } else if (ev_kc) {
-            if (is_jump(ev_kc->keycode) && ev_kc->state) {
-                lv_img_set_offset_x(widget->obj, 4);
-            } else {
-                lv_img_set_offset_x(widget->obj, 0);
+            if (is_jump(ev_kc->keycode)) {
+                if (ev_kc->state) {
+                    lv_img_set_offset_x(widget->obj, 4);
+                } else {
+                    lv_img_set_offset_x(widget->obj, 0);
+                }
+            } else if (is_sneak(ev_kc->keycode)) {
+                if (ev_kc->state && current_luna_state != luna_state_sneak) {
+                    current_luna_state = luna_state_sneak;
+                } else {
+                    current_luna_state = luna_state_normal;
+                }
             }
         }
         update_luna_wpm(widget);
