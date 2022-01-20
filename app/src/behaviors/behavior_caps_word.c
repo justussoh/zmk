@@ -16,6 +16,7 @@
 #include <zmk/events/position_state_changed.h>
 #include <zmk/events/keycode_state_changed.h>
 #include <zmk/events/modifiers_state_changed.h>
+#include <zmk/events/caps_word_state_changed.h>
 #include <zmk/hid.h>
 #include <zmk/keymap.h>
 
@@ -43,11 +44,17 @@ struct behavior_caps_word_data {
 static void activate_caps_word(const struct device *dev) {
     struct behavior_caps_word_data *data = dev->data;
 
+    ZMK_EVENT_RAISE(
+        new_zmk_caps_word_state_changed((struct zmk_caps_word_state_changed){.state = true}));
+
     data->active = true;
 }
 
 static void deactivate_caps_word(const struct device *dev) {
     struct behavior_caps_word_data *data = dev->data;
+
+    ZMK_EVENT_RAISE(
+        new_zmk_caps_word_state_changed((struct zmk_caps_word_state_changed){.state = false}));
 
     data->active = false;
 }
